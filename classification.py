@@ -1,11 +1,13 @@
 # Import the libraries
 import pandas as pd
 import numpy as np
+import math
 
 # Load the data
 train_data = pd.read_csv('train_data.csv').values
 train_labels = pd.read_csv('train_labels.csv').values
 test_data = pd.read_csv('test_data.csv').values
+
 
 
 def get_data_means(X):
@@ -29,16 +31,44 @@ def get_data_means(X):
     return data
 
 
+def get_data(X, xall):
+
+    
+
+    X2 = np.zeros((X.shape[0],0))
+    
+
+    for col in range(X.shape[1]):
+
+        col_max = np.amax(xall[:,col])
+        col_min = np.amin(xall[:,col])
+
+
+        if(col_max != col_min):
+
+            X3 = np.reshape(X[:,col], (X[:,col].shape[0], 1))
+            X2 = np.concatenate((X2, X3), axis=1)
+    
+
+    for i in range(X2.shape[1]):
+
+        sarakemax = np.amax(X2[:,i])
+        sarakemin = np.amin(X2[:,i])
+
+        X2[:,i] = np.divide(np.subtract(X2[:,i],sarakemin), np.subtract(sarakemax,sarakemin))
+
+    return X2
+    
+
+
 def sigmoid_func(z): 
 
     sigmoid = 1/(1+np.exp(-z))
-
     return sigmoid
 
 def gradient(X,y,w):
 
     N= np.size(X,0)
-
     grad =  (1/N)*np.dot(X.T,sigmoid_func(np.dot(X,w.T))-y)
 
     return grad
@@ -64,41 +94,62 @@ def logisticRegression_func(X,y,step_size, K):
         loss_list.append(loss[0]/N)
 
     
-    return loss_list, w
+    return loss_list, w 
+
+def calculate_accuracy(y,y_hat):
+    N = y.shape[0];
+    correct = 0;
+    for i in range(N):
+        if (y[i]==y_hat[i]):
+            correct += 1
+    accuracy = round(correct/N,4)*100
+    return accuracy
+
 
 def get_labels(y, genre):
 
+
     labels = np.zeros((y.shape[0], 1))
     for i in range(y.shape[0]):
-        if(y[i] == genre):
+        if(y[i] == genre+1):
             labels[i] = 1
         else:
             labels[i] = 0
-            
+
     return labels
 
 
 
 y_predict = []
 step_size = 1
-num_iter = 300
+num_iter = 3000
 
 
-X_train = get_data_means(train_data)
-X_test = get_data_means(test_data)
+X_all = np.concatenate((train_data, test_data), 0)
 
 
-for i in range(1,11):
+X_train = get_data(train_data, X_all)
+X_test = get_data(test_data, X_all)
+
+
+
+for i in range(0,10):
     
     _, w_opt = logisticRegression_func(X_train, get_labels(train_labels, i), step_size, num_iter)
     y_predict_i = sigmoid_func(np.dot(X_test, w_opt.T))  
 
     N = y_predict_i.shape[0]
     if not len(y_predict):
-        y_predict = np.zeros((N,11))
+        y_predict = np.zeros((N,10))
         y_predict[:,i] = y_predict_i.reshape(X_test.shape[0])
     else:
         y_predict[:,i] = y_predict_i.reshape(X_test.shape[0])
 
-y_hat = y_predict.argmax(axis=1)
-print(y_hat)
+
+y_hat = y_predict.argmax(axis=1) + 1
+
+np.savetxt("probs.csv", y_predict, delimiter=",")
+
+
+
+
